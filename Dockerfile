@@ -26,9 +26,10 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY . .
 
 # Configure Nginx for frontend
-COPY --from=frontend-build /app/dist /usr/share/nginx/html
-# Update nginx to listen on port 1223 instead of 80
-RUN sed -i 's/listen  *80;/listen 1223;/g' /etc/nginx/conf.d/default.conf
+COPY --from=frontend-build /app/dist /var/www/html
+# Update Debian nginx config to listen on port 1223 instead of 80
+RUN sed -i 's/listen 80 default_server;/listen 1223 default_server;/g' /etc/nginx/sites-available/default && \
+    sed -i 's/listen \[::\]:80 default_server;/listen \[::\]:1223 default_server;/g' /etc/nginx/sites-available/default
 
 # Setup supervisord
 COPY supervisord.conf /etc/supervisor/conf.d/supervisord.conf
