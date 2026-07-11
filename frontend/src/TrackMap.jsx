@@ -1,8 +1,9 @@
 import React, { useRef, useEffect, useState } from 'react';
 
-export default function TrackMap({ motionData, participants, trackId }) {
+export default function TrackMap({ motionData, participants, trackId, currentLap }) {
   const canvasRef = useRef(null);
   const pathRef = useRef([]); 
+  const lastLapRef = useRef(currentLap || 1);
   const [staticMap, setStaticMap] = useState(null);
   const [isSaving, setIsSaving] = useState(false);
 
@@ -38,18 +39,22 @@ export default function TrackMap({ motionData, participants, trackId }) {
       const lastPoint = pathRef.current[pathRef.current.length - 1];
       if (!lastPoint || Math.abs(lastPoint.x - playerCar.x) > 1 || Math.abs(lastPoint.z - playerCar.z) > 1) {
         pathRef.current.push({ x: playerCar.x, z: playerCar.z });
-        
-        // Auto-save the map once we have a decent chunk of data (approx a full lap)
-        if (pathRef.current.length > 800 && !isSaving && trackId !== -1) {
-          setIsSaving(true);
-          fetch(`http://${window.location.hostname}:1224/api/tracks/${trackId}`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ path: pathRef.current })
-          })
-          .then(() => setStaticMap([...pathRef.current]))
-          .catch(err => console.error(err));
-        }
+      }
+      
+      // Auto-save the map ONLY when a full lap is completed so we get the entire circuit
+      if (currentLap > lastLapRef.current && pathRef.current.length > 1000 && !isSaving && trackId !== -1) {
+        setIsSaving(true);
+        fetch(`http://${window.location.hostname}:1224/api/tracks/${trackId}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ path: pathRef.current })
+        })
+        .then(() => setStaticMap([...pathRef.current]))
+        .catch(err => console.error(err));
+      }
+      
+      if (currentLap > lastLapRef.current) {
+          lastLapRef.current = currentLap;
       }
     }
 
@@ -117,7 +122,7 @@ export default function TrackMap({ motionData, participants, trackId }) {
         }
     }
     
-  }, [motionData, participants, staticMap, trackId]);
+  }, [motionData, participants, staticMap, trackId, currentLap]);
 
   return (
     <div className="glass-panel" style={{ gridColumn: 'span 2', minHeight: '300px' }}>

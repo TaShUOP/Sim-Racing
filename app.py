@@ -107,16 +107,21 @@ def get_session_track_map(session_uid: str):
     if not frame or not tracks:
         return {"path": None}
         
-    # Find the matching track map by checking if the session's first frame is near the track path
+    best_track = None
+    min_dist_overall = float('inf')
+    
     for t in tracks:
         path = json.loads(t.path_data)
         if not path: continue
         
-        # Check a few points in the path to see if any are close to the frame
-        for p in path[::50]:
+        for p in path[::5]: # Check every 5th point for precision
             dist = ((p['x'] - frame.world_pos_x)**2 + (p['z'] - frame.world_pos_z)**2)**0.5
-            if dist < 200: # Within 200 meters of any point on the track
-                return {"path": path}
+            if dist < min_dist_overall:
+                min_dist_overall = dist
+                best_track = path
+                
+    if best_track and min_dist_overall < 1500: # generous 1.5km bounding box
+        return {"path": best_track}
                 
     return {"path": None}
 
