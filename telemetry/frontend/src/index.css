@@ -1,0 +1,188 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Outfit:wght@400;500;600;700;800&display=swap');
+
+:root {
+  --bg-dark: #0a0a0f;
+  --bg-panel: rgba(25, 25, 35, 0.6);
+  --border-color: rgba(255, 255, 255, 0.08);
+  --accent: #e10600; /* F1 Red */
+  --text-main: #f0f0f5;
+  --text-muted: #888899;
+}
+
+body {
+  margin: 0;
+  font-family: 'Inter', sans-serif;
+  background-color: var(--bg-dark);
+  background-image: radial-gradient(circle at top right, rgba(225, 6, 0, 0.05), transparent 400px),
+                    radial-gradient(circle at bottom left, rgba(40, 40, 60, 0.5), transparent 400px);
+  color: var(--text-main);
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+.glass-panel {
+  background: var(--bg-panel);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid var(--border-color);
+  border-radius: 16px;
+  padding: 24px;
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  display: flex;
+  flex-direction: column;
+}
+
+.glass-panel:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 40px 0 rgba(0, 0, 0, 0.4);
+}
+
+h1, h2, h3, h4 {
+  font-family: 'Outfit', sans-serif;
+  margin-top: 0;
+  font-weight: 700;
+}
+
+.dashboard-container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 40px 20px;
+  display: grid;
+  gap: 24px;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+}
+
+.header-banner {
+  grid-column: 1 / -1;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.status-indicator {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  padding: 8px 16px;
+  border-radius: 20px;
+  background: rgba(0, 200, 83, 0.1);
+  color: #00c853;
+  border: 1px solid rgba(0, 200, 83, 0.2);
+}
+
+.status-indicator.disconnected {
+  background: rgba(225, 6, 0, 0.1);
+  color: #e10600;
+  border: 1px solid rgba(225, 6, 0, 0.2);
+}
+
+.status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: currentColor;
+  box-shadow: 0 0 8px currentColor;
+}
+
+.stat-value {
+  font-family: 'Outfit', sans-serif;
+  font-size: 4rem;
+  font-weight: 800;
+  line-height: 1;
+  background: linear-gradient(135deg, #fff, #aaa);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  margin: 8px 0;
+}
+
+.stat-label {
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  color: var(--text-muted);
+  font-weight: 600;
+}
+
+.bar-container {
+  width: 100%;
+  height: 12px;
+  background: rgba(0,0,0,0.4);
+  border-radius: 6px;
+  overflow: hidden;
+  margin-top: 12px;
+  border: 1px solid var(--border-color);
+}
+
+.bar-fill {
+  height: 100%;
+  border-radius: 6px;
+  transition: width 0.05s linear;
+}
+
+.bar-throttle { background: linear-gradient(90deg, #00c853, #b2ff59); box-shadow: 0 0 10px rgba(0,200,83,0.5); }
+.bar-brake { background: linear-gradient(90deg, #e10600, #ff5252); box-shadow: 0 0 10px rgba(225,6,0,0.5); }
+
+.gear-display {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-size: 6rem;
+  font-weight: 800;
+  font-family: 'Outfit', sans-serif;
+  color: var(--accent);
+  text-shadow: 0 0 20px rgba(225, 6, 0, 0.4);
+  flex-grow: 1;
+}
+
+.rpm-bar {
+  display: flex;
+  gap: 4px;
+  height: 24px;
+  margin-top: 16px;
+}
+
+.rpm-led {
+  flex: 1;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.05);
+  transition: background 0.05s ease;
+}
+
+.rpm-led.green { background: #00c853; box-shadow: 0 0 10px rgba(0,200,83,0.8); }
+.rpm-led.red { background: #e10600; box-shadow: 0 0 10px rgba(225,6,0,0.8); }
+.rpm-led.blue { background: #2979ff; box-shadow: 0 0 10px rgba(41,121,255,0.8); }
+
+.tyre-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  margin-top: 16px;
+}
+
+.tyre {
+  background: rgba(0,0,0,0.3);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
+.tyre-label {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  font-weight: 600;
+}
+
+.tyre-temp {
+  font-family: 'Outfit', sans-serif;
+  font-size: 1.5rem;
+  font-weight: 700;
+}
