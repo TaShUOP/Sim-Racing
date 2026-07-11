@@ -1,0 +1,36 @@
+pipeline {
+    agent any
+
+    environment {
+        COMPOSE_PROJECT_NAME = 'sim-racing-telemetry'
+    }
+
+    stages {
+        stage('Checkout') {
+            steps {
+                checkout scm
+            }
+        }
+        
+        stage('Build Services') {
+            steps {
+                bat 'docker-compose build'
+            }
+        }
+
+        stage('Deploy Services') {
+            steps {
+                bat 'docker-compose up -d'
+            }
+        }
+    }
+
+    post {
+        always {
+            echo 'Deployment Pipeline Completed'
+        }
+        failure {
+            echo 'Pipeline failed! Please check the logs.'
+        }
+    }
+}

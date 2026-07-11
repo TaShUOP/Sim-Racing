@@ -9,6 +9,14 @@ class SessionLap(Base):
     lap_number = Column(Integer)
     lap_time = Column(Float, nullable=True)
 
+class SessionParticipant(Base):
+    __tablename__ = "session_participants"
+
+    id = Column(Integer, primary_key=True, index=True)
+    session_uid = Column(String, index=True)
+    car_index = Column(Integer, index=True)
+    name = Column(String)
+
 class TelemetryFrame(Base):
     __tablename__ = "telemetry_frames"
 

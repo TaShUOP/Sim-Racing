@@ -1,0 +1,23 @@
+version: '3.8'
+
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: backend.Dockerfile
+    ports:
+      - "1224:1224"
+      - "20777:20777/udp"
+    volumes:
+      - ./telemetry.db:/app/telemetry.db
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: .
+      dockerfile: frontend.Dockerfile
+    ports:
+      - "1223:1223"
+    depends_on:
+      - backend
+    restart: unless-stopped

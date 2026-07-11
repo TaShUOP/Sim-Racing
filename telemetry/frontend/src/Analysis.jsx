@@ -7,9 +7,11 @@ export default function Analysis() {
   const [sessions, setSessions] = useState([]);
   const [selectedSession, setSelectedSession] = useState('');
   const [telemetryData, setTelemetryData] = useState([]);
+  const [opponent, setOpponent] = useState('none');
+  const [participants, setParticipants] = useState({});
 
   useEffect(() => {
-    fetch('http://localhost:8000/api/sessions')
+    fetch('http://' + window.location.hostname + ':1224/api/sessions')
       .then(res => res.json())
       .then(data => {
         setSessions(data.sessions);
@@ -21,10 +23,19 @@ export default function Analysis() {
 
   useEffect(() => {
     if (!selectedSession) return;
-    fetch(`http://localhost:8000/api/sessions/${selectedSession}?car_index=0`)
+    
+    fetch(`http://${window.location.hostname}:1224/api/sessions/${selectedSession}/participants`)
+      .then(res => res.json())
+      .then(data => setParticipants(data.participants || {}));
+      
+    let query = '0';
+    if (opponent !== 'none') {
+      query += `,${opponent}`;
+    }
+    fetch(`http://${window.location.hostname}:1224/api/sessions/${selectedSession}?car_index=${query}`)
       .then(res => res.json())
       .then(data => setTelemetryData(data.data));
-  }, [selectedSession]);
+  }, [selectedSession, opponent]);
 
   return (
     <div className="dashboard-container" style={{ display: 'block', maxWidth: '1200px', margin: '0 auto' }}>
@@ -35,16 +46,40 @@ export default function Analysis() {
         <h2>Post-Session Analysis</h2>
       </div>
 
-      <div className="glass-panel" style={{ marginBottom: '24px' }}>
-        <div className="stat-label">Select Session</div>
-        <select 
-          value={selectedSession} 
-          onChange={(e) => setSelectedSession(e.target.value)}
-          style={{ padding: '8px', marginTop: '8px', background: 'rgba(0,0,0,0.5)', color: '#fff', border: '1px solid #333', borderRadius: '4px', width: '100%', fontFamily: 'Outfit' }}
-        >
-          {sessions.length === 0 && <option>No sessions found</option>}
-          {sessions.map(s => <option key={s} value={s}>Session UID: {s}</option>)}
-        </select>
+      <div className="glass-panel" style={{ marginBottom: '24px', display: 'flex', gap: '16px' }}>
+        <div style={{ flex: 1 }}>
+          <div className="stat-label">Select Session</div>
+          <select 
+            value={selectedSession} 
+            onChange={(e) => setSelectedSession(e.target.value)}
+            style={{ padding: '8px', marginTop: '8px', background: 'rgba(0,0,0,0.5)', color: '#fff', border: '1px solid #333', borderRadius: '4px', width: '100%', fontFamily: 'Outfit' }}
+          >
+            {sessions.length === 0 && <option>No sessions found</option>}
+            {sessions.map(s => <option key={s} value={s}>Session UID: {s}</option>)}
+          </select>
+        </div>
+        
+        <div style={{ flex: 1 }}>
+          <div className="stat-label">Compare With</div>
+          <select 
+            value={opponent} 
+            onChange={(e) => setOpponent(e.target.value)}
+            style={{ padding: '8px', marginTop: '8px', background: 'rgba(0,0,0,0.5)', color: '#fff', border: '1px solid #333', borderRadius: '4px', width: '100%', fontFamily: 'Outfit' }}
+          >
+            <option value="none">None (Solo)</option>
+            {Object.keys(participants).length > 0 ? (
+              Object.entries(participants)
+                .filter(([idx]) => idx !== '0')
+                .map(([idx, name]) => (
+                <option key={idx} value={idx}>{name} (Car {idx})</option>
+              ))
+            ) : (
+              Array.from({length: 21}, (_, i) => i + 1).map(i => (
+                <option key={i} value={i}>Opponent Car {i}</option>
+              ))
+            )}
+          </select>
+        </div>
       </div>
 
       {telemetryData.length > 0 ? (
@@ -58,7 +93,11 @@ export default function Analysis() {
                   <XAxis dataKey="session_time" stroke="#888" tickFormatter={(val) => val.toFixed(1) + 's'} />
                   <YAxis stroke="#888" />
                   <Tooltip contentStyle={{ background: 'rgba(0,0,0,0.8)', border: '1px solid #333', borderRadius: '8px' }} />
-                  <Line type="monotone" dataKey="speed" stroke="#2979ff" dot={false} strokeWidth={2} isAnimationActive={false} />
+                  <Legend />
+                  <Line name="Your Speed" type="monotone" dataKey="speed_0" stroke="#2979ff" dot={false} strokeWidth={2} isAnimationActive={false} />
+                  {opponent !== 'none' && (
+                    <Line name={`Opp. ${opponent} Speed`} type="monotone" dataKey={`speed_${opponent}`} stroke="#aa00ff" dot={false} strokeWidth={2} isAnimationActive={false} />
+                  )}
                 </LineChart>
               </ResponsiveContainer>
             </div>
@@ -74,8 +113,15 @@ export default function Analysis() {
                   <YAxis stroke="#888" />
                   <Tooltip contentStyle={{ background: 'rgba(0,0,0,0.8)', border: '1px solid #333', borderRadius: '8px' }} />
                   <Legend />
-                  <Line type="step" dataKey="throttle" stroke="#00c853" dot={false} strokeWidth={2} isAnimationActive={false} />
-                  <Line type="step" dataKey="brake" stroke="#e10600" dot={false} strokeWidth={2} isAnimationActive={false} />
+                  <Line name="Your Throttle" type="step" dataKey="throttle_0" stroke="#00c853" dot={false} strokeWidth={2} isAnimationActive={false} />
+                  <Line name="Your Brake" type="step" dataKey="brake_0" stroke="#e10600" dot={false} strokeWidth={2} isAnimationActive={false} />
+                  
+                  {opponent !== 'none' && (
+                    <>
+                      <Line name={`Opp. ${opponent} Throttle`} type="step" dataKey={`throttle_${opponent}`} stroke="#b2ff59" dot={false} strokeWidth={2} strokeDasharray="5 5" isAnimationActive={false} />
+                      <Line name={`Opp. ${opponent} Brake`} type="step" dataKey={`brake_${opponent}`} stroke="#ff8a80" dot={false} strokeWidth={2} strokeDasharray="5 5" isAnimationActive={false} />
+                    </>
+                  )}
                 </LineChart>
               </ResponsiveContainer>
             </div>

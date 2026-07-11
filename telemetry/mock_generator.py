@@ -2,9 +2,12 @@ import socket
 import struct
 import time
 import math
+import random
 
 UDP_IP = "127.0.0.1"
 UDP_PORT = 20777
+
+SESSION_UID = random.randint(100000000, 999999999)
 
 # Constants for sizes
 HEADER_FORMAT = "<HBBBBBQfIIBB"
@@ -26,7 +29,7 @@ NUMBERS = [1, 11, 44, 63, 16, 55, 4, 81, 14, 18, 31, 10, 23, 2, 22, 3, 77, 24, 2
 
 def generate_header(packet_id, frame_id, session_time):
     # 2025 format, year 25, major 1, minor 0, version 1
-    return struct.pack(HEADER_FORMAT, 2025, 25, 1, 0, 1, packet_id, 123456789, session_time, frame_id, frame_id, 0, 255)
+    return struct.pack(HEADER_FORMAT, 2025, 25, 1, 0, 1, packet_id, SESSION_UID, session_time, frame_id, frame_id, 0, 255)
 
 def send_participants(sock, frame_id, session_time):
     header = generate_header(4, frame_id, session_time)

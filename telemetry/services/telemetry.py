@@ -1,6 +1,6 @@
 from database.db import SessionLocal
-from database.models import TelemetryFrame
-from udp.packets import CarTelemetryPacket, MotionPacket
+from database.models import TelemetryFrame, SessionParticipant
+from udp.packets import CarTelemetryPacket, MotionPacket, ParticipantsPacket
 from udp.decoder import register_callback
 import asyncio
 
@@ -78,5 +78,32 @@ async def queue_telemetry_frame(packet):
             
         if len(_frame_buffer) >= BUFFER_LIMIT:
             asyncio.create_task(save_telemetry_batch())
+            
+    elif isinstance(packet, ParticipantsPacket):
+        if not is_recording:
+            return
+            
+        session_uid = str(packet.header.session_uid)
+        async def _save_participants():
+            db = SessionLocal()
+            try:
+                # check if already saved
+                exists = db.query(SessionParticipant).filter_by(session_uid=session_uid).first()
+                if not exists:
+                    participants = []
+                    for i, p in enumerate(packet.participants):
+                        if p.name != "Unknown":
+                            participants.append(SessionParticipant(
+                                session_uid=session_uid,
+                                car_index=i,
+                                name=p.name
+                            ))
+                    db.add_all(participants)
+                    db.commit()
+            except Exception as e:
+                db.rollback()
+            finally:
+                db.close()
+        asyncio.create_task(_save_participants())
 
 register_callback(queue_telemetry_frame)

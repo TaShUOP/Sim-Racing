@@ -25,7 +25,7 @@ export default function Dashboard() {
     setIsRecordingLoading(true);
     setRecordingError('');
     const newState = !isRecording;
-    fetch('http://localhost:8000/api/recording', {
+    fetch('http://' + window.location.hostname + ':1224/api/recording', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ is_recording: newState })
@@ -45,7 +45,7 @@ export default function Dashboard() {
   };
 
   useEffect(() => {
-    wsRef.current = new WebSocket('ws://localhost:8000/ws/telemetry');
+    wsRef.current = new WebSocket('ws://' + window.location.hostname + ':1224/ws/telemetry');
     wsRef.current.onopen = () => setConnected(true);
     
     wsRef.current.onmessage = (event) => {
