@@ -64,11 +64,11 @@ export default function TrackMap({ motionData, participants, trackId }) {
     if (pathToDraw.length > 0) {
         ctx.beginPath();
         ctx.strokeStyle = staticMap ? 'rgba(255, 255, 255, 0.4)' : 'rgba(255, 255, 255, 0.2)';
-        ctx.lineWidth = staticMap ? 10 : 3;
+        ctx.lineWidth = staticMap ? 4 : 3;
         ctx.lineJoin = 'round';
         ctx.lineCap = 'round';
         if (staticMap) {
-            ctx.shadowBlur = 10;
+            ctx.shadowBlur = 4;
             ctx.shadowColor = 'rgba(255, 255, 255, 0.2)';
         }
         

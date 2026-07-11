@@ -24,6 +24,7 @@ class TelemetryFrame(Base):
     session_uid = Column(String, index=True)
     car_index = Column(Integer, index=True)
     lap_number = Column(Integer, index=True)
+    lap_distance = Column(Float, index=True, default=0.0)
     session_time = Column(Float, index=True)
     
     speed = Column(Integer)

@@ -52,6 +52,8 @@ class MotionPacket(BaseModel):
 
 class LapData(BaseModel):
     car_position: int
+    lap_distance: float
+    current_lap_num: int
 
 class LapPacket(BaseModel):
     header: PacketHeader
@@ -135,7 +137,11 @@ def parse_lap_data(data: bytes, header: PacketHeader) -> LapPacket:
     laps = []
     for _ in range(22):
         unpacked = struct.unpack(LAP_DATA_FORMAT, data[offset:offset+LAP_DATA_SIZE])
-        laps.append(LapData(car_position=unpacked[13]))
+        laps.append(LapData(
+            car_position=unpacked[13],
+            lap_distance=unpacked[10],
+            current_lap_num=unpacked[14]
+        ))
         offset += LAP_DATA_SIZE
     return LapPacket(header=header, lap_data=laps)
 

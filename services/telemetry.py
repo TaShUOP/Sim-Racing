@@ -1,6 +1,6 @@
 from database.db import SessionLocal
 from database.models import TelemetryFrame, SessionParticipant
-from udp.packets import CarTelemetryPacket, MotionPacket, ParticipantsPacket
+from udp.packets import CarTelemetryPacket, MotionPacket, ParticipantsPacket, LapPacket
 from udp.decoder import register_callback
 import asyncio
 
@@ -10,6 +10,7 @@ is_recording = False
 
 # Store the last known position for all 22 cars
 _last_known_positions = [{'x': 0.0, 'y': 0.0, 'z': 0.0} for _ in range(22)]
+_last_known_lap_data = [{'distance': 0.0, 'lap': 1} for _ in range(22)]
 
 def set_recording(state: bool):
     global is_recording, _frame_buffer
@@ -41,7 +42,7 @@ async def save_telemetry_batch():
     await asyncio.to_thread(_save)
 
 async def queue_telemetry_frame(packet):
-    global _frame_buffer, _last_known_positions, is_recording
+    global _frame_buffer, _last_known_positions, _last_known_lap_data, is_recording
     
     if isinstance(packet, MotionPacket):
         for i in range(22):
@@ -52,6 +53,14 @@ async def queue_telemetry_frame(packet):
                 'z': motion.world_position_z
             }
             
+    elif isinstance(packet, LapPacket):
+        for i in range(22):
+            lap_info = packet.lap_data[i]
+            _last_known_lap_data[i] = {
+                'distance': lap_info.lap_distance,
+                'lap': lap_info.current_lap_num
+            }
+            
     elif isinstance(packet, CarTelemetryPacket):
         if not is_recording:
             return
@@ -59,11 +68,13 @@ async def queue_telemetry_frame(packet):
         for i in range(22):
             car_data = packet.car_telemetry_data[i]
             pos = _last_known_positions[i]
+            lap = _last_known_lap_data[i]
             
             frame = TelemetryFrame(
                 session_uid=str(packet.header.session_uid),
                 car_index=i,
-                lap_number=1,
+                lap_number=lap['lap'],
+                lap_distance=lap['distance'],
                 session_time=packet.header.session_time,
                 speed=car_data.speed,
                 throttle=car_data.throttle,

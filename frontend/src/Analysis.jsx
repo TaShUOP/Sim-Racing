@@ -10,6 +10,8 @@ export default function Analysis() {
   const [telemetryData, setTelemetryData] = useState([]);
   const [opponent, setOpponent] = useState('none');
   const [participants, setParticipants] = useState({});
+  const [availableLaps, setAvailableLaps] = useState([]);
+  const [selectedLap, setSelectedLap] = useState(1);
 
   useEffect(() => {
     fetch('http://' + window.location.hostname + ':1224/api/sessions')
@@ -29,14 +31,27 @@ export default function Analysis() {
       .then(res => res.json())
       .then(data => setParticipants(data.participants || {}));
       
+    fetch(`http://${window.location.hostname}:1224/api/sessions/${selectedSession}/laps`)
+      .then(res => res.json())
+      .then(data => {
+          setAvailableLaps(data.laps || []);
+          if (data.laps && data.laps.length > 0 && !data.laps.includes(selectedLap)) {
+              setSelectedLap(data.laps[0]);
+          }
+      });
+  }, [selectedSession]);
+
+  useEffect(() => {
+    if (!selectedSession) return;
+    
     let query = '0';
     if (opponent !== 'none') {
       query += `,${opponent}`;
     }
-    fetch(`http://${window.location.hostname}:1224/api/sessions/${selectedSession}?car_index=${query}`)
+    fetch(`http://${window.location.hostname}:1224/api/sessions/${selectedSession}?car_index=${query}&lap=${selectedLap}`)
       .then(res => res.json())
       .then(data => setTelemetryData(data.data));
-  }, [selectedSession, opponent]);
+  }, [selectedSession, opponent, selectedLap]);
 
   return (
     <div className="dashboard-container" style={{ display: 'block', maxWidth: '1200px', margin: '0 auto' }}>
@@ -60,6 +75,18 @@ export default function Analysis() {
           </select>
         </div>
         
+        <div style={{ flex: 1 }}>
+          <div className="stat-label">Select Lap</div>
+          <select 
+            value={selectedLap} 
+            onChange={(e) => setSelectedLap(parseInt(e.target.value))}
+            style={{ padding: '8px', marginTop: '8px', background: 'rgba(0,0,0,0.5)', color: '#fff', border: '1px solid #333', borderRadius: '4px', width: '100%', fontFamily: 'Outfit' }}
+          >
+            {availableLaps.length === 0 && <option>No laps recorded</option>}
+            {availableLaps.map(l => <option key={l} value={l}>Lap {l}</option>)}
+          </select>
+        </div>
+
         <div style={{ flex: 1 }}>
           <div className="stat-label">Compare With</div>
           <select 
@@ -93,7 +120,7 @@ export default function Analysis() {
               <ResponsiveContainer>
                 <LineChart data={telemetryData}>
                   <CartesianGrid strokeDasharray="3 3" stroke="#333" />
-                  <XAxis dataKey="session_time" stroke="#888" tickFormatter={(val) => val.toFixed(1) + 's'} />
+                  <XAxis dataKey="lap_distance" stroke="#888" tickFormatter={(val) => val.toFixed(0) + 'm'} />
                   <YAxis stroke="#888" />
                   <Tooltip contentStyle={{ background: 'rgba(0,0,0,0.8)', border: '1px solid #333', borderRadius: '8px' }} />
                   <Legend />
@@ -112,7 +139,7 @@ export default function Analysis() {
               <ResponsiveContainer>
                 <LineChart data={telemetryData}>
                   <CartesianGrid strokeDasharray="3 3" stroke="#333" />
-                  <XAxis dataKey="session_time" stroke="#888" tickFormatter={(val) => val.toFixed(1) + 's'} />
+                  <XAxis dataKey="lap_distance" stroke="#888" tickFormatter={(val) => val.toFixed(0) + 'm'} />
                   <YAxis stroke="#888" />
                   <Tooltip contentStyle={{ background: 'rgba(0,0,0,0.8)', border: '1px solid #333', borderRadius: '8px' }} />
                   <Legend />

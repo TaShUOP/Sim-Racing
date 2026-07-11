@@ -53,8 +53,18 @@ def get_session_participants(session_uid: str):
     res = {p.car_index: p.name for p in participants}
     return {"participants": res}
 
+@app.get("/api/sessions/{session_uid}/laps")
+def get_session_laps(session_uid: str, car_index: int = 0):
+    db = SessionLocal()
+    laps = db.query(TelemetryFrame.lap_number).filter(
+        TelemetryFrame.session_uid == session_uid,
+        TelemetryFrame.car_index == car_index
+    ).distinct().order_by(TelemetryFrame.lap_number).all()
+    db.close()
+    return {"laps": [L[0] for L in laps if L[0] > 0]}
+
 @app.get("/api/sessions/{session_uid}")
-def get_session_data(session_uid: str, car_index: str = "0"):
+def get_session_data(session_uid: str, car_index: str = "0", lap: int = 1):
     db = SessionLocal()
     try:
         car_indices = [int(x) for x in car_index.split(",")]
@@ -63,27 +73,29 @@ def get_session_data(session_uid: str, car_index: str = "0"):
         
     frames = db.query(TelemetryFrame).filter(
         TelemetryFrame.session_uid == session_uid,
-        TelemetryFrame.car_index.in_(car_indices)
-    ).order_by(TelemetryFrame.session_time).all()
+        TelemetryFrame.car_index.in_(car_indices),
+        TelemetryFrame.lap_number == lap
+    ).order_by(TelemetryFrame.lap_distance).all()
     db.close()
     
-    time_map = {}
+    dist_map = {}
     for frame in frames:
-        t = frame.session_time
-        if t not in time_map:
-            time_map[t] = {"session_time": t}
+        # Bucket by 10 meters to align cars perfectly
+        d = round(frame.lap_distance / 10) * 10
+        
+        if d not in dist_map:
+            dist_map[d] = {"lap_distance": d}
         
         idx = frame.car_index
-        time_map[t][f"speed_{idx}"] = frame.speed
-        time_map[t][f"throttle_{idx}"] = frame.throttle
-        time_map[t][f"brake_{idx}"] = frame.brake
-        time_map[t][f"world_pos_x_{idx}"] = frame.world_pos_x
-        time_map[t][f"world_pos_z_{idx}"] = frame.world_pos_z
+        dist_map[d][f"speed_{idx}"] = frame.speed
+        dist_map[d][f"throttle_{idx}"] = frame.throttle
+        dist_map[d][f"brake_{idx}"] = frame.brake
+        dist_map[d][f"world_pos_x_{idx}"] = frame.world_pos_x
+        dist_map[d][f"world_pos_z_{idx}"] = frame.world_pos_z
 
-    data = sorted(list(time_map.values()), key=lambda x: x["session_time"])
+    data = sorted(list(dist_map.values()), key=lambda x: x["lap_distance"])
     
-    # Decimate the grouped rows
-    return {"data": data[::10]}
+    return {"data": data}
 
 @app.get("/api/sessions/{session_uid}/track")
 def get_session_track_map(session_uid: str):

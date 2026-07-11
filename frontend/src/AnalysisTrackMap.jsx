@@ -34,10 +34,10 @@ export default function AnalysisTrackMap({ telemetryData, sessionUid, opponent }
     // Draw static map
     ctx.beginPath();
     ctx.strokeStyle = 'rgba(255, 255, 255, 0.4)';
-    ctx.lineWidth = 10;
+    ctx.lineWidth = 4;
     ctx.lineJoin = 'round';
     ctx.lineCap = 'round';
-    ctx.shadowBlur = 10;
+    ctx.shadowBlur = 4;
     ctx.shadowColor = 'rgba(255, 255, 255, 0.2)';
     
     for (let i = 0; i < staticMap.length; i++) {
