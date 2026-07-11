@@ -1,25 +1,32 @@
 import asyncio
-import socket
 from .decoder import decode_packet
 
 UDP_IP = "0.0.0.0"
 UDP_PORT = 20777
 
+class TelemetryProtocol(asyncio.DatagramProtocol):
+    def connection_made(self, transport):
+        self.transport = transport
+        print(f"Listening for F1 telemetry on UDP {UDP_IP}:{UDP_PORT}")
+
+    def datagram_received(self, data, addr):
+        # Process the packet asynchronously without blocking the UDP listener
+        asyncio.create_task(decode_packet(data))
+        
+    def error_received(self, exc):
+        print(f"UDP Protocol error: {exc}")
+
 async def start_udp_listener():
     loop = asyncio.get_running_loop()
     
-    # Use standard python socket with asyncio
-    sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-    sock.bind((UDP_IP, UDP_PORT))
-    sock.setblocking(False)
+    transport, protocol = await loop.create_datagram_endpoint(
+        lambda: TelemetryProtocol(),
+        local_addr=(UDP_IP, UDP_PORT)
+    )
     
-    print(f"Listening for F1 telemetry on UDP {UDP_IP}:{UDP_PORT}")
-    
-    while True:
-        try:
-            # We wait until the socket is readable
-            data, addr = await loop.sock_recvfrom(sock, 2048)
-            asyncio.create_task(decode_packet(data))
-        except Exception as e:
-            print(f"UDP Listener error: {e}")
-            await asyncio.sleep(1)
+    try:
+        # Keep the listener alive
+        while True:
+            await asyncio.sleep(3600)
+    except asyncio.CancelledError:
+        transport.close()
