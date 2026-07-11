@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Activity, Gauge, Zap } from 'lucide-react';
+import { Activity, Gauge, Zap, Play, Square, BarChart2 } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import TrackMap from './TrackMap';
+import Leaderboard from './Leaderboard';
 import './index.css';
 
 const INITIAL_TELEMETRY = {
@@ -11,8 +13,36 @@ const INITIAL_TELEMETRY = {
 export default function Dashboard() {
   const [telemetry, setTelemetry] = useState(INITIAL_TELEMETRY);
   const [motionData, setMotionData] = useState({ cars: [], playerIndex: 0 });
+  const [participants, setParticipants] = useState([]);
+  const [lapData, setLapData] = useState([]);
   const [connected, setConnected] = useState(false);
+  const [isRecording, setIsRecording] = useState(false);
+  const [isRecordingLoading, setIsRecordingLoading] = useState(false);
+  const [recordingError, setRecordingError] = useState('');
   const wsRef = useRef(null);
+
+  const toggleRecording = () => {
+    setIsRecordingLoading(true);
+    setRecordingError('');
+    const newState = !isRecording;
+    fetch('http://localhost:8000/api/recording', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ is_recording: newState })
+    })
+    .then(res => {
+        if (!res.ok) throw new Error('Server error');
+        return res.json();
+    })
+    .then(data => {
+        setIsRecording(data.is_recording);
+        setIsRecordingLoading(false);
+    })
+    .catch(err => {
+        setRecordingError('Failed to start');
+        setIsRecordingLoading(false);
+    });
+  };
 
   useEffect(() => {
     wsRef.current = new WebSocket('ws://localhost:8000/ws/telemetry');
@@ -27,6 +57,10 @@ export default function Dashboard() {
         }
       } else if (data.type === 'motion') {
         setMotionData({ cars: data.cars, playerIndex: data.player_index });
+      } else if (data.type === 'participants') {
+        setParticipants(data.cars);
+      } else if (data.type === 'lap_data') {
+        setLapData(data.cars);
       }
     };
     
@@ -46,19 +80,50 @@ export default function Dashboard() {
   });
 
   return (
-    <div className="dashboard-container">
+    <div className="dashboard-container" style={{ gridTemplateColumns: 'minmax(280px, 320px) 1fr 1fr' }}>
       <div className="header-banner">
-        <h2>
-          <Activity size={24} style={{ display: 'inline', verticalAlign: 'middle', marginRight: '8px', color: 'var(--accent)' }} />
+        <h2 style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <Activity size={24} style={{ color: 'var(--accent)' }} />
           F1 25 LIVE TELEMETRY
         </h2>
-        <div className={`status-indicator ${connected ? '' : 'disconnected'}`}>
-          <div className="status-dot"></div>
-          {connected ? 'CONNECTED (60Hz)' : 'DISCONNECTED'}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+          
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', position: 'relative' }}>
+            <button 
+              onClick={toggleRecording}
+              disabled={isRecordingLoading}
+              style={{ 
+                display: 'flex', alignItems: 'center', gap: '6px', 
+                padding: '6px 16px', borderRadius: '20px', 
+                border: 'none', cursor: isRecordingLoading ? 'wait' : 'pointer', fontWeight: 'bold', fontFamily: 'Outfit',
+                background: isRecording ? '#e10600' : '#333', 
+                color: '#fff', transition: 'all 0.3s ease',
+                boxShadow: isRecording ? '0 0 15px rgba(225,6,0,0.5)' : 'none',
+                opacity: isRecordingLoading ? 0.7 : 1
+              }}
+            >
+              {isRecordingLoading ? null : (isRecording ? <Square size={14} fill="#fff" /> : <Play size={14} fill="#fff" />)}
+              {isRecordingLoading ? 'PLEASE WAIT...' : (isRecording ? 'RECORDING' : 'START RECORDING')}
+            </button>
+            {recordingError && <span style={{ position: 'absolute', top: '100%', right: '0', color: '#ff5252', fontSize: '0.75rem', marginTop: '4px', fontWeight: 'bold' }}>{recordingError}</span>}
+          </div>
+          
+          <Link to="/analysis" style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#fff', textDecoration: 'none', padding: '6px 16px', background: 'rgba(255,255,255,0.1)', borderRadius: '20px', fontFamily: 'Outfit', fontWeight: '600' }}>
+            <BarChart2 size={16} /> ANALYSIS
+          </Link>
+
+          <div className={`status-indicator ${connected ? '' : 'disconnected'}`}>
+            <div className="status-dot"></div>
+            {connected ? '60Hz' : 'DISCONNECTED'}
+          </div>
         </div>
       </div>
       
-      <TrackMap motionData={motionData} />
+      {/* Left Column: Leaderboard */}
+      <Leaderboard participants={participants} lapData={lapData} playerIndex={motionData.playerIndex} />
+
+      {/* Right Area: Track Map & Dials spanning 2 columns */}
+      <TrackMap motionData={motionData} participants={participants} />
 
       <div className="glass-panel">
         <div className="stat-label">Speed</div>

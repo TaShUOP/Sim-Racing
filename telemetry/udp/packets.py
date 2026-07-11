@@ -50,31 +50,46 @@ class MotionPacket(BaseModel):
     header: PacketHeader
     car_motion_data: List[CarMotionData]
 
+class LapData(BaseModel):
+    car_position: int
+
+class LapPacket(BaseModel):
+    header: PacketHeader
+    lap_data: List[LapData]
+
+class ParticipantData(BaseModel):
+    race_number: int
+    name: str
+
+class ParticipantsPacket(BaseModel):
+    header: PacketHeader
+    num_active_cars: int
+    participants: List[ParticipantData]
+
 HEADER_FORMAT = "<HBBBBBQfIIBB"
 HEADER_SIZE = struct.calcsize(HEADER_FORMAT)
 
 CAR_TELEMETRY_DATA_FORMAT = "<HfffBbHBBH4H4B4BH4f4B"
 CAR_TELEMETRY_DATA_SIZE = struct.calcsize(CAR_TELEMETRY_DATA_FORMAT)
 
-# Format for one car's motion data: 6 floats, 6 shorts, 6 floats (60 bytes)
 CAR_MOTION_DATA_FORMAT = "<ffffffhhhhhhffffff"
 CAR_MOTION_DATA_SIZE = struct.calcsize(CAR_MOTION_DATA_FORMAT)
+
+# Exact F1 25 LapData: 57 bytes
+LAP_DATA_FORMAT = "<IIHBHBHBHBfffBBBBBBBBBBBBBBBHHBfB"
+LAP_DATA_SIZE = struct.calcsize(LAP_DATA_FORMAT)
+
+# Exact F1 25 ParticipantsData: 57 bytes
+PARTICIPANT_DATA_FORMAT = "<BBBBBBB32sBBHBB12s"
+PARTICIPANT_DATA_SIZE = struct.calcsize(PARTICIPANT_DATA_FORMAT)
 
 def parse_header(data: bytes) -> PacketHeader:
     unpacked = struct.unpack(HEADER_FORMAT, data[:HEADER_SIZE])
     return PacketHeader(
-        packet_format=unpacked[0],
-        game_year=unpacked[1],
-        game_major_version=unpacked[2],
-        game_minor_version=unpacked[3],
-        packet_version=unpacked[4],
-        packet_id=unpacked[5],
-        session_uid=unpacked[6],
-        session_time=unpacked[7],
-        frame_identifier=unpacked[8],
-        overall_frame_identifier=unpacked[9],
-        player_car_index=unpacked[10],
-        secondary_player_car_index=unpacked[11]
+        packet_format=unpacked[0], game_year=unpacked[1], game_major_version=unpacked[2],
+        game_minor_version=unpacked[3], packet_version=unpacked[4], packet_id=unpacked[5],
+        session_uid=unpacked[6], session_time=unpacked[7], frame_identifier=unpacked[8],
+        overall_frame_identifier=unpacked[9], player_car_index=unpacked[10], secondary_player_car_index=unpacked[11]
     )
 
 def parse_car_telemetry(data: bytes, header: PacketHeader) -> CarTelemetryPacket:
@@ -104,15 +119,33 @@ def parse_car_telemetry(data: bytes, header: PacketHeader) -> CarTelemetryPacket
 def parse_motion(data: bytes, header: PacketHeader) -> MotionPacket:
     offset = HEADER_SIZE
     car_motion_list = []
-    
     for _ in range(22):
         unpacked = struct.unpack(CAR_MOTION_DATA_FORMAT, data[offset:offset+CAR_MOTION_DATA_SIZE])
-        car_motion = CarMotionData(
-            world_position_x=unpacked[0],
-            world_position_y=unpacked[1],
-            world_position_z=unpacked[2]
-        )
+        car_motion = CarMotionData(world_position_x=unpacked[0], world_position_y=unpacked[1], world_position_z=unpacked[2])
         car_motion_list.append(car_motion)
         offset += CAR_MOTION_DATA_SIZE
-        
     return MotionPacket(header=header, car_motion_data=car_motion_list)
+
+def parse_lap_data(data: bytes, header: PacketHeader) -> LapPacket:
+    offset = HEADER_SIZE
+    laps = []
+    for _ in range(22):
+        unpacked = struct.unpack(LAP_DATA_FORMAT, data[offset:offset+LAP_DATA_SIZE])
+        laps.append(LapData(car_position=unpacked[13]))
+        offset += LAP_DATA_SIZE
+    return LapPacket(header=header, lap_data=laps)
+
+def parse_participants(data: bytes, header: PacketHeader) -> ParticipantsPacket:
+    offset = HEADER_SIZE
+    num_active_cars = struct.unpack("<B", data[offset:offset+1])[0]
+    offset += 1
+    participants = []
+    for _ in range(22):
+        unpacked = struct.unpack(PARTICIPANT_DATA_FORMAT, data[offset:offset+PARTICIPANT_DATA_SIZE])
+        try:
+            name = unpacked[7].decode('utf-8').split('\x00', 1)[0]
+        except:
+            name = "Unknown"
+        participants.append(ParticipantData(race_number=unpacked[5], name=name))
+        offset += PARTICIPANT_DATA_SIZE
+    return ParticipantsPacket(header=header, num_active_cars=num_active_cars, participants=participants)

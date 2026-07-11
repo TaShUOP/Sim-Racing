@@ -1,13 +1,23 @@
 from database.db import SessionLocal
 from database.models import TelemetryFrame
 from udp.packets import CarTelemetryPacket, MotionPacket
+from udp.decoder import register_callback
 import asyncio
 
 _frame_buffer = []
 BUFFER_LIMIT = 22 * 60 # 60 frames per second for 22 cars
+is_recording = False
 
 # Store the last known position for all 22 cars
 _last_known_positions = [{'x': 0.0, 'y': 0.0, 'z': 0.0} for _ in range(22)]
+
+def set_recording(state: bool):
+    global is_recording, _frame_buffer
+    is_recording = state
+    if not state:
+        # Flush the buffer when stopping
+        if _frame_buffer:
+            asyncio.create_task(save_telemetry_batch())
 
 async def save_telemetry_batch():
     global _frame_buffer
@@ -30,8 +40,8 @@ async def save_telemetry_batch():
             
     await asyncio.to_thread(_save)
 
-def queue_telemetry_frame(packet):
-    global _frame_buffer, _last_known_positions
+async def queue_telemetry_frame(packet):
+    global _frame_buffer, _last_known_positions, is_recording
     
     if isinstance(packet, MotionPacket):
         for i in range(22):
@@ -43,6 +53,9 @@ def queue_telemetry_frame(packet):
             }
             
     elif isinstance(packet, CarTelemetryPacket):
+        if not is_recording:
+            return
+            
         for i in range(22):
             car_data = packet.car_telemetry_data[i]
             pos = _last_known_positions[i]
@@ -65,3 +78,5 @@ def queue_telemetry_frame(packet):
             
         if len(_frame_buffer) >= BUFFER_LIMIT:
             asyncio.create_task(save_telemetry_batch())
+
+register_callback(queue_telemetry_frame)
