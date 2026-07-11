@@ -12,24 +12,29 @@ A full-stack, real-time telemetry dashboard for F1 25 (and backwards compatible 
 - **Backend:** Python, FastAPI, WebSockets, SQLAlchemy, SQLite
 - **Frontend:** React, Vite, HTML5 Canvas, Vanilla CSS
 
-## Setup & Running
+## Setup & Deployment (Docker)
 
-### 1. Start the Backend
-Open a terminal in the `telemetry` folder:
-```powershell
-python -m venv venv
-.\venv\Scripts\activate
-pip install fastapi uvicorn websockets pydantic sqlalchemy
-python -m uvicorn app:app --port 8000 --reload
+This application is fully containerized into a single Docker image containing both the Nginx React frontend and the Uvicorn Python backend.
+
+### 1. Build and Run the Docker Container
+Open a terminal in the `telemetry` folder and build the image:
+```bash
+docker build -t f1-telemetry:latest .
 ```
 
-### 2. Start the Frontend Dashboard
-Open a new terminal in the `telemetry/frontend` folder:
-```powershell
-npm install
-npm run dev
+Run the container, making sure to expose the necessary ports:
+```bash
+docker run -d \
+    --restart unless-stopped \
+    --name f1-telemetry \
+    -p 1223:1223 \
+    -p 1224:1224 \
+    -p 20777:20777/udp \
+    f1-telemetry:latest
 ```
-Visit `http://localhost:5173` in your browser.
+
+### 2. Access the Dashboard
+Visit `http://localhost:1223` (or replace `localhost` with your machine's IP address to view it on any device on your network).
 
 ### 3. Send Telemetry Data
 If you are playing F1 25:

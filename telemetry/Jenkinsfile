@@ -1,36 +1,66 @@
 pipeline {
-    agent any
+    agent {
+        label 'Main'
+    }
 
     environment {
-        COMPOSE_PROJECT_NAME = 'sim-racing-telemetry'
+        IMAGE_NAME = "f1-telemetry"
+        CONTAINER_NAME = "f1-telemetry"
+        IMAGE_TAG = "${BUILD_NUMBER}"
     }
 
     stages {
+
         stage('Checkout') {
             steps {
                 checkout scm
             }
         }
-        
-        stage('Build Services') {
+
+        stage('Build Docker Image') {
             steps {
-                bat 'docker-compose build'
+                sh "whoami"
+                sh """
+                    docker build \
+                        -t ${IMAGE_NAME}:${IMAGE_TAG} \
+                        -t ${IMAGE_NAME}:latest \
+                        .
+                """
             }
         }
 
-        stage('Deploy Services') {
+        stage('Stop Existing Container') {
             steps {
-                bat 'docker-compose up -d'
+                sh """
+                    docker stop ${CONTAINER_NAME} || true
+                    docker rm ${CONTAINER_NAME} || true
+                """
+            }
+        }
+
+        stage('Deploy Container') {
+            steps {
+                sh """
+                    docker run -d \
+                        --restart unless-stopped \
+                        --name ${CONTAINER_NAME} \
+                        -p 1223:1223 \
+                        -p 1224:1224 \
+                        -p 20777:20777/udp \
+                        ${IMAGE_NAME}:latest
+                """
             }
         }
     }
 
     post {
-        always {
-            echo 'Deployment Pipeline Completed'
+        success {
+            echo "Deployment Successful!"
+            sh "docker ps"
         }
+
         failure {
-            echo 'Pipeline failed! Please check the logs.'
+            echo "Deployment Failed!"
         }
     }
 }
