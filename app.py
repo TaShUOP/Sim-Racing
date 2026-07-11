@@ -2,8 +2,9 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from database.db import init_db, SessionLocal
-from database.models import TelemetryFrame, SessionParticipant
+from database.models import TelemetryFrame, SessionParticipant, TrackMap
 from api import websocket
+import json
 from services import telemetry
 import asyncio
 from udp.listener import start_udp_listener
@@ -76,8 +77,58 @@ def get_session_data(session_uid: str, car_index: str = "0"):
         time_map[t][f"speed_{idx}"] = frame.speed
         time_map[t][f"throttle_{idx}"] = frame.throttle
         time_map[t][f"brake_{idx}"] = frame.brake
+        time_map[t][f"world_pos_x_{idx}"] = frame.world_pos_x
+        time_map[t][f"world_pos_z_{idx}"] = frame.world_pos_z
 
     data = sorted(list(time_map.values()), key=lambda x: x["session_time"])
     
     # Decimate the grouped rows
     return {"data": data[::10]}
+
+@app.get("/api/sessions/{session_uid}/track")
+def get_session_track_map(session_uid: str):
+    db = SessionLocal()
+    frame = db.query(TelemetryFrame).filter_by(session_uid=session_uid).first()
+    tracks = db.query(TrackMap).all()
+    db.close()
+    
+    if not frame or not tracks:
+        return {"path": None}
+        
+    # Find the matching track map by checking if the session's first frame is near the track path
+    for t in tracks:
+        path = json.loads(t.path_data)
+        if not path: continue
+        
+        # Check a few points in the path to see if any are close to the frame
+        for p in path[::50]:
+            dist = ((p['x'] - frame.world_pos_x)**2 + (p['z'] - frame.world_pos_z)**2)**0.5
+            if dist < 200: # Within 200 meters of any point on the track
+                return {"path": path}
+                
+    return {"path": None}
+
+class TrackMapRequest(BaseModel):
+    path: list
+
+@app.get("/api/tracks/{track_id}")
+def get_track_map(track_id: int):
+    db = SessionLocal()
+    track = db.query(TrackMap).filter_by(track_id=track_id).first()
+    db.close()
+    if track:
+        return {"path": json.loads(track.path_data)}
+    return {"path": None}
+
+@app.post("/api/tracks/{track_id}")
+def save_track_map(track_id: int, req: TrackMapRequest):
+    db = SessionLocal()
+    track = db.query(TrackMap).filter_by(track_id=track_id).first()
+    if track:
+        track.path_data = json.dumps(req.path)
+    else:
+        track = TrackMap(track_id=track_id, path_data=json.dumps(req.path))
+        db.add(track)
+    db.commit()
+    db.close()
+    return {"status": "ok"}

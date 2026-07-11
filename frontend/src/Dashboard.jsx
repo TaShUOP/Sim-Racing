@@ -15,6 +15,8 @@ export default function Dashboard() {
   const [motionData, setMotionData] = useState({ cars: [], playerIndex: 0 });
   const [participants, setParticipants] = useState([]);
   const [lapData, setLapData] = useState([]);
+  const [trackId, setTrackId] = useState(-1);
+  const [currentLap, setCurrentLap] = useState(1);
   const [connected, setConnected] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
   const [isRecordingLoading, setIsRecordingLoading] = useState(false);
@@ -61,6 +63,11 @@ export default function Dashboard() {
         setParticipants(data.cars);
       } else if (data.type === 'lap_data') {
         setLapData(data.cars);
+        if (data.cars && data.cars[motionData.playerIndex]) {
+            setCurrentLap(data.cars[motionData.playerIndex].current_lap || 1);
+        }
+      } else if (data.type === 'session') {
+        setTrackId(data.track_id);
       }
     };
     
@@ -123,7 +130,7 @@ export default function Dashboard() {
       <Leaderboard participants={participants} lapData={lapData} playerIndex={motionData.playerIndex} />
 
       {/* Right Area: Track Map & Dials spanning 2 columns */}
-      <TrackMap motionData={motionData} participants={participants} />
+      <TrackMap motionData={motionData} participants={participants} trackId={trackId} currentLap={currentLap} />
 
       <div className="glass-panel">
         <div className="stat-label">Speed</div>

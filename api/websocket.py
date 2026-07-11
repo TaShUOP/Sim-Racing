@@ -2,7 +2,7 @@ from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 from typing import List
 import asyncio
 from udp.decoder import register_callback
-from udp.packets import CarTelemetryPacket, MotionPacket, LapPacket, ParticipantsPacket
+from udp.packets import CarTelemetryPacket, MotionPacket, LapPacket, ParticipantsPacket, SessionPacket
 
 router = APIRouter()
 
@@ -80,6 +80,13 @@ async def on_new_packet(packet):
         payload = {
             "type": "participants",
             "cars": [{"name": p.name, "number": p.race_number} for p in packet.participants]
+        }
+        await manager.broadcast_data(payload)
+        
+    elif isinstance(packet, SessionPacket):
+        payload = {
+            "type": "session",
+            "track_id": packet.track_id
         }
         await manager.broadcast_data(payload)
 

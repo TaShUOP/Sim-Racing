@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { ArrowLeft } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import AnalysisTrackMap from './AnalysisTrackMap';
 
 export default function Analysis() {
   const [sessions, setSessions] = useState([]);
@@ -84,6 +85,8 @@ export default function Analysis() {
 
       {telemetryData.length > 0 ? (
         <>
+          <AnalysisTrackMap telemetryData={telemetryData} sessionUid={selectedSession} opponent={opponent} />
+          
           <div className="glass-panel" style={{ marginBottom: '24px' }}>
             <div className="stat-label" style={{ marginBottom: '16px' }}>Speed trace (km/h)</div>
             <div style={{ height: '300px', width: '100%' }}>

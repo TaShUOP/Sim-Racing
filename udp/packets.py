@@ -66,6 +66,10 @@ class ParticipantsPacket(BaseModel):
     num_active_cars: int
     participants: List[ParticipantData]
 
+class SessionPacket(BaseModel):
+    header: PacketHeader
+    track_id: int
+
 HEADER_FORMAT = "<HBBBBBQfIIBB"
 HEADER_SIZE = struct.calcsize(HEADER_FORMAT)
 
@@ -149,3 +153,7 @@ def parse_participants(data: bytes, header: PacketHeader) -> ParticipantsPacket:
         participants.append(ParticipantData(race_number=unpacked[5], name=name))
         offset += PARTICIPANT_DATA_SIZE
     return ParticipantsPacket(header=header, num_active_cars=num_active_cars, participants=participants)
+
+def parse_session(data: bytes, header: PacketHeader) -> SessionPacket:
+    track_id = struct.unpack_from('<b', data, HEADER_SIZE + 7)[0]
+    return SessionPacket(header=header, track_id=track_id)

@@ -1,5 +1,5 @@
 from typing import Callable, Awaitable, Any
-from .packets import parse_header, parse_car_telemetry, parse_motion, parse_lap_data, parse_participants, PacketHeader, CarTelemetryPacket, MotionPacket, LapPacket, ParticipantsPacket
+from .packets import parse_header, parse_car_telemetry, parse_motion, parse_lap_data, parse_participants, parse_session, PacketHeader, CarTelemetryPacket, MotionPacket, LapPacket, ParticipantsPacket, SessionPacket
 
 # Observers for new telemetry data
 _callbacks = []
@@ -41,6 +41,13 @@ async def decode_packet(data: bytes):
                 participants = parse_participants(data, header)
                 for callback in _callbacks:
                     await callback(participants)
+                    
+        # 1 is Session Data
+        elif header.packet_id == 1:
+            if len(data) >= 29 + 8:
+                session = parse_session(data, header)
+                for callback in _callbacks:
+                    await callback(session)
                     
     except Exception as e:
         print(f"Error decoding packet ID {header.packet_id if 'header' in locals() else 'Unknown'}: {e}")

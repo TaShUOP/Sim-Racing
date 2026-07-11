@@ -36,3 +36,10 @@ class TelemetryFrame(Base):
     world_pos_x = Column(Float, default=0.0)
     world_pos_y = Column(Float, default=0.0)
     world_pos_z = Column(Float, default=0.0)
+
+class TrackMap(Base):
+    __tablename__ = "track_maps"
+
+    id = Column(Integer, primary_key=True, index=True)
+    track_id = Column(Integer, unique=True, index=True)
+    path_data = Column(String) # Stored as JSON string
